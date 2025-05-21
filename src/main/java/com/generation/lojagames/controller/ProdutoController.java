@@ -1,5 +1,6 @@
 package com.generation.lojagames.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -50,16 +52,16 @@ public class ProdutoController {
 
 	@PostMapping
 	public ResponseEntity<Produto> post(@RequestBody Produto produto) {
-	    Long idCategoria = produto.getCategoria().getId();
+		Long idCategoria = produto.getCategoria().getId();
 
-	    Categoria categoria = categoriaRepository.findById(idCategoria)
-	        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "A Categoria não existe!"));
+		Categoria categoria = categoriaRepository.findById(idCategoria)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "A Categoria não existe!"));
 
-	    produto.setCategoria(categoria); // associa a categoria completa ao produto
+		produto.setCategoria(categoria); // associa a categoria completa ao produto
 
-	    return ResponseEntity.status(HttpStatus.CREATED).body(produtoRepository.save(produto));
+		return ResponseEntity.status(HttpStatus.CREATED).body(produtoRepository.save(produto));
 	}
-	
+
 	@PutMapping
 	public ResponseEntity<Produto> put(@Valid @RequestBody Produto produto) {
 
@@ -68,11 +70,11 @@ public class ProdutoController {
 
 		if (produtoRepository.existsById(produto.getId())) {
 			if (categoriaRepository.existsById(produto.getCategoria().getId()))
-				
+
 				return ResponseEntity.status(HttpStatus.OK).body(produtoRepository.save(produto));
-		
+
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A categoria não existe!", null);
-			
+
 		}
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 
@@ -86,10 +88,65 @@ public class ProdutoController {
 
 		if (postagem.isEmpty())
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-		
-		
+
 		produtoRepository.deleteById(id);
 
 	}
+	/**
+	 * Retorna uma lista de produtos cujo preço seja maior que o valor informado.
+	 *
+	 * @param preco Valor mínimo que os produtos devem ter para serem listados.
+	 * @return Lista de produtos com preço superior ao valor especificado.
+	 *
+	 * Exemplo de requisição:
+	 * GET /produtos/maior/100.00
+	 */
+	@GetMapping("/maior/{preco}") 
+	public ResponseEntity<List<Produto>> getByPrecoMaior(@PathVariable BigDecimal preco) {
+		return ResponseEntity.ok(produtoRepository.findAllByPrecoGreaterThan(preco));
+	}
+	
+	/**
+	 * Retorna uma lista de produtos cujo preço seja menor que o valor informado.
+	 *
+	 * @param preco Valor máximo que os produtos devem ter para serem listados.
+	 * @return Lista de produtos com preço inferior ao valor especificado.
+	 *
+	 * Exemplo de requisição:
+	 * GET /produtos/menor/200.00
+	 */
+	@GetMapping("/menor/{preco}")
+	public ResponseEntity<List<Produto>> getByPrecoMenor(@PathVariable BigDecimal preco) {
+		return ResponseEntity.ok(produtoRepository.findAllByPrecoLessThan(preco));
+	}
+	/**
+	 * Retorna uma lista de produtos com preço **maior** do que o valor especificado.
+	 *
+	 * @param preco O valor mínimo de preço para filtrar os produtos.
+	 * @return Lista de produtos com preço superior ao informado.
+	 *
+	 * Exemplo de requisição:
+	 * GET /produtos/maior?preco=150
+	 */
+	
+	@GetMapping("/maior")
+	public ResponseEntity<List<Produto>> getByMaiorPreco(@RequestParam BigDecimal preco) {
+	    return ResponseEntity.ok(produtoRepository.findAllByPrecoGreaterThan(preco));
+	}
+	
+	/**
+	 * Retorna uma lista de produtos com preço **menor** do que o valor especificado.
+	 *
+	 * @param preco O valor máximo de preço para filtrar os produtos.
+	 * @return Lista de produtos com preço inferior ao informado.
+	 *
+	 * Exemplo de requisição:
+	 * GET /produtos/menor?preco=300
+	 */
+	@GetMapping("/menor")
+	public ResponseEntity<List<Produto>> getByMenorPreco(@RequestParam BigDecimal preco) {
+	    return ResponseEntity.ok(produtoRepository.findAllByPrecoLessThan(preco));
+	}
+
 
 }
