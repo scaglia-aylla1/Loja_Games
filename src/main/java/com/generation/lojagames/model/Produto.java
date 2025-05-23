@@ -24,6 +24,10 @@ public class Produto {
     @ManyToOne
     @JsonIgnoreProperties("produtos")
     private Categoria categoria;
+    
+    @ManyToOne
+	@JsonIgnoreProperties("produtos")
+	private Usuario usuario;
 
     // Getters e Setters
 
