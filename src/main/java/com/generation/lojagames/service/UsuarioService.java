@@ -1,6 +1,8 @@
 package com.generation.lojagames.service;
 
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,35 +32,46 @@ public class UsuarioService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-	public Optional<Usuario> cadastrarUsuario(Usuario usuario) {
+    public Optional<Usuario> cadastrarUsuario(Usuario usuario) {
 
-		if (usuarioRepository.findByUsuario(usuario.getUsuario()).isPresent())
-			return Optional.empty();
+        // Verifica se o usuário já existe
+        if (usuarioRepository.findByUsuario(usuario.getUsuario()).isPresent())
+            return Optional.empty();
 
-		usuario.setSenha(criptografarSenha(usuario.getSenha()));
+        // Verifica se a data de nascimento é válida (18+ anos)
+        if (!isMaiorDeIdade(usuario.getDataNascimento()))
+            return Optional.empty();
 
-		return Optional.of(usuarioRepository.save(usuario));
+        // Criptografa a senha
+        usuario.setSenha(criptografarSenha(usuario.getSenha()));
 
-	}
+        // Salva o usuário
+        return Optional.of(usuarioRepository.save(usuario));
+    }
 
-	public Optional<Usuario> atualizarUsuario(Usuario usuario) {
+    public Optional<Usuario> atualizarUsuario(Usuario usuario) {
 
-		if(usuarioRepository.findById(usuario.getId()).isPresent()) {
+        Optional<Usuario> usuarioExistente = usuarioRepository.findById(usuario.getId());
 
-			Optional<Usuario> buscaUsuario = usuarioRepository.findByUsuario(usuario.getUsuario());
+        if (usuarioExistente.isPresent()) {
 
-			if ( (buscaUsuario.isPresent()) && ( buscaUsuario.get().getId() != usuario.getId()))
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuário já existe!", null);
+            Optional<Usuario> buscaUsuario = usuarioRepository.findByUsuario(usuario.getUsuario());
 
-			usuario.setSenha(criptografarSenha(usuario.getSenha()));
+            if (buscaUsuario.isPresent() && !buscaUsuario.get().getId().equals(usuario.getId()))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuário já existe!", null);
 
-			return Optional.ofNullable(usuarioRepository.save(usuario));
+            // ⚠️ Preserva a data de nascimento do banco
+            usuario.setDataNascimento(usuarioExistente.get().getDataNascimento());
 
-		}
+            // Criptografa a senha
+            usuario.setSenha(criptografarSenha(usuario.getSenha()));
 
-		return Optional.empty();
+            return Optional.of(usuarioRepository.save(usuario));
+        }
 
-	}
+        return Optional.empty();
+    }
+
 
 	public Optional<UsuarioLogin> autenticarUsuario(Optional<UsuarioLogin> usuarioLogin) {
 
@@ -94,6 +107,13 @@ public class UsuarioService {
 		return Optional.empty();
 
     }
+	
+	private boolean isMaiorDeIdade(LocalDate dtnascimento) {
+	    if (dtnascimento == null)
+	        return false;
+
+	    return Period.between(dtnascimento, LocalDate.now()).getYears() >= 18;
+	}
 
 	private String criptografarSenha(String senha) {
 
